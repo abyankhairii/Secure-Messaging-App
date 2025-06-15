@@ -1,0 +1,169 @@
+<!-- templates/messages.html -->
+{% extends "base.html" %}
+
+{% block title %}Messages - Secure Messaging{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Send Message Panel -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-paper-plane"></i> Send Encrypted Message</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('send_message') }}">
+                    <div class="mb-3">
+                        <label for="recipient_id" class="form-label">
+                            <i class="fas fa-user"></i> Recipient
+                        </label>
+                        <select class="form-select" id="recipient_id" name="recipient_id" required>
+                            <option value="">Select recipient...</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="message" class="form-label">
+                            <i class="fas fa-lock"></i> Message
+                        </label>
+                        <textarea class="form-control" id="message" name="message" rows="4" 
+                                  placeholder="Type your message here... (will be encrypted)" required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-shield-alt"></i> Send Encrypted
+                    </button>
+                </form>
+                
+                <div class="alert alert-success mt-3" role="alert">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        All messages are encrypted using AES-128 with PBKDF2 key derivation
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages Panel -->
+    <div class="col-md-8">
+        <!-- Received Messages -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-inbox"></i> Received Messages</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if received_messages %}
+                    {% for message in received_messages %}
+                        <div class="message-item p-3 mb-2 {% if not message.is_read %}border-start border-warning border-3{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <strong class="text-primary">
+                                            <i class="fas fa-user"></i> {{ message.sender }}
+                                        </strong>
+                                        <span class="encrypted-badge ms-2">
+                                            <i class="fas fa-lock"></i> ENCRYPTED
+                                        </span>
+                                        {% if not message.is_read %}
+                                            <span class="badge bg-warning ms-2">NEW</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-2">{{ message.content }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> 
+                                        {{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                                {% if not message.is_read %}
+                                    <a href="{{ url_for('mark_read', message_id=message.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-check"></i> Mark Read
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No messages received yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sent Messages -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-paper-plane"></i> Sent Messages</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if sent_messages %}
+                    {% for message in sent_messages %}
+                        <div class="message-item p-3 mb-2">
+                            <div class="d-flex align-items-center mb-2">
+                                <strong class="text-info">
+                                    <i class="fas fa-arrow-right"></i> To: {{ message.recipient }}
+                                </strong>
+                                <span class="encrypted-badge ms-2">
+                                    <i class="fas fa-lock"></i> ENCRYPTED
+                                </span>
+                            </div>
+                            <p class="mb-2">{{ message.content }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> 
+                                {{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-paper-plane fa-3x mb-3"></i>
+                        <p>No messages sent yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security Info Modal -->
+<div class="modal fade" id="securityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shield-alt"></i> Security Features
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6><i class="fas fa-lock"></i> Encryption</h6>
+                <ul>
+                    <li>AES-128 symmetric encryption using Fernet</li>
+                    <li>PBKDF2 key derivation with 100,000 iterations</li>
+                    <li>Unique salt for each user</li>
+                </ul>
+                
+                <h6><i class="fas fa-user-shield"></i> Authentication</h6>
+                <ul>
+                    <li>Password hashing using bcrypt</li>
+                    <li>Session-based authentication</li>
+                    <li>User isolation</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Security Info Button -->
+<button type="button" class="btn btn-primary position-fixed bottom-0 end-0 m-3 rounded-circle" 
+        data-bs-toggle="modal" data-bs-target="#securityModal" 
+        style="width: 60px; height: 60px;">
+    <i class="fas fa-shield-alt"></i>
+</button>
+{% endblock %}
